@@ -55,9 +55,42 @@ class Api::OrdersController < ApplicationController
 
     square_customer_id = customer[:id]
 
-    # Update current user with Square customer ID if not already set
-    if current_user && current_user.square_customer_id.blank?
-      current_user.update(square_customer_id: square_customer_id)
+    # Update current user with Square customer ID and profile info
+    if current_user
+      user_updates = {}
+
+      # Save Square customer ID if not already set
+      user_updates[:square_customer_id] = square_customer_id if current_user.square_customer_id.blank?
+
+      # Save customer name if provided
+      user_updates[:given_name] = customer_info[:given_name] if customer_info[:given_name].present?
+      user_updates[:family_name] = customer_info[:family_name] if customer_info[:family_name].present?
+
+      # Save shipping address if provided
+      if shipping_address.present?
+        user_updates[:address_line_1] = shipping_address[:address_line_1] if shipping_address[:address_line_1].present?
+        user_updates[:address_line_2] = shipping_address[:address_line_2] if shipping_address[:address_line_2].present?
+        user_updates[:city] = shipping_address[:locality] if shipping_address[:locality].present?
+        user_updates[:state] = shipping_address[:administrative_district_level_1] if shipping_address[:administrative_district_level_1].present?
+        user_updates[:postal_code] = shipping_address[:postal_code] if shipping_address[:postal_code].present?
+        user_updates[:country] = shipping_address[:country] || 'US'
+      end
+
+      current_user.update(user_updates) if user_updates.any?
+
+      # Update Square customer with address if provided
+      if shipping_address.present?
+        square_service.update_customer(square_customer_id, {
+          address: {
+            address_line_1: shipping_address[:address_line_1],
+            address_line_2: shipping_address[:address_line_2],
+            locality: shipping_address[:locality],
+            administrative_district_level_1: shipping_address[:administrative_district_level_1],
+            postal_code: shipping_address[:postal_code],
+            country: shipping_address[:country] || 'US'
+          }.compact
+        })
+      end
     end
 
     # Create the order

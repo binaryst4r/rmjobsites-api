@@ -433,6 +433,31 @@ class SquareService
     handle_standard_error(e)
   end
 
+  # Get all orders for a specific customer
+  # @param customer_id [String] The Square customer ID
+  # @param limit [Integer] Number of results
+  # @return [Hash] { orders: Array, cursor: String }
+  def get_customer_orders(customer_id, limit: 100)
+    query = {
+      filter: {
+        customer_filter: {
+          customer_ids: [customer_id]
+        },
+        state_filter: {
+          states: ['COMPLETED', 'OPEN']
+        }
+      },
+      sort: {
+        sort_field: 'CREATED_AT',
+        sort_order: 'DESC'
+      }
+    }
+
+    search_orders(query: query, limit: limit)
+  rescue StandardError => e
+    handle_standard_error(e)
+  end
+
   # ======================
   # PAYMENT OPERATIONS
   # ======================

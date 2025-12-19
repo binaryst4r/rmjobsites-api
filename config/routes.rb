@@ -30,6 +30,14 @@ Rails.application.routes.draw do
         post :calculate
       end
     end
+
+    resources :customers, only: [:show, :update] do
+      member do
+        get :orders
+        get :cards
+        delete 'cards/:card_id', to: 'customers#destroy_card'
+      end
+    end
   end
 
   # Defines the root path route ("/")
