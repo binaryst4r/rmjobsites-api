@@ -1,9 +1,9 @@
 class Api::ServiceRequestsController < ApplicationController
   skip_before_action :authenticate_request, only: [:create]
-  before_action :require_admin, only: [:index]
+  before_action :require_admin, only: [:index, :assign]
 
   def index
-    service_requests = ServiceRequest.includes(:user).order(created_at: :desc)
+    service_requests = ServiceRequest.includes(:user, assignment: :assigned_to_user).order(created_at: :desc)
 
     render json: {
       service_requests: service_requests.map { |sr| format_service_request(sr) }
@@ -43,6 +43,42 @@ class Api::ServiceRequestsController < ApplicationController
     }, status: :internal_server_error
   end
 
+  def assign
+    service_request = ServiceRequest.find(params[:id])
+    assigned_to_user = User.find(params[:assigned_to_user_id])
+
+    unless assigned_to_user.admin?
+      render json: { error: "User must be an admin" }, status: :unprocessable_entity
+      return
+    end
+
+    # Check if assignment already exists
+    if service_request.assignment
+      # Update existing assignment
+      service_request.assignment.update!(
+        assigned_to_user: assigned_to_user,
+        assigned_by_user: current_user
+      )
+    else
+      # Create new assignment
+      service_request.create_assignment!(
+        assigned_to_user: assigned_to_user,
+        assigned_by_user: current_user
+      )
+    end
+
+    render json: {
+      service_request: format_service_request(service_request.reload),
+      message: "Service request assigned successfully"
+    }, status: :ok
+  rescue ActiveRecord::RecordNotFound => e
+    render json: { error: "Record not found: #{e.message}" }, status: :not_found
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  rescue StandardError => e
+    render json: { error: "Failed to assign service request: #{e.message}" }, status: :internal_server_error
+  end
+
   private
 
   def require_admin
@@ -74,7 +110,7 @@ class Api::ServiceRequestsController < ApplicationController
   end
 
   def format_service_request(service_request)
-    {
+    result = {
       id: service_request.id,
       user_id: service_request.user_id,
       customer_name: service_request.customer_name,
@@ -93,5 +129,19 @@ class Api::ServiceRequestsController < ApplicationController
       created_at: service_request.created_at,
       updated_at: service_request.updated_at
     }
+
+    # Add assignment info if present
+    if service_request.assignment
+      result[:assigned_user] = {
+        id: service_request.assignment.assigned_to_user.id,
+        email: service_request.assignment.assigned_to_user.email,
+        given_name: service_request.assignment.assigned_to_user.given_name,
+        family_name: service_request.assignment.assigned_to_user.family_name
+      }
+    else
+      result[:assigned_user] = nil
+    end
+
+    result
   end
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_12_17_231954) do
+ActiveRecord::Schema[8.0].define(version: 2026_01_06_025654) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -28,6 +28,17 @@ ActiveRecord::Schema[8.0].define(version: 2025_12_17_231954) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["user_id"], name: "index_equipment_rental_requests_on_user_id"
+  end
+
+  create_table "service_request_assignments", force: :cascade do |t|
+    t.bigint "service_request_id", null: false
+    t.bigint "assigned_to_user_id", null: false
+    t.bigint "assigned_by_user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["assigned_by_user_id"], name: "index_service_request_assignments_on_assigned_by_user_id"
+    t.index ["assigned_to_user_id"], name: "index_service_request_assignments_on_assigned_to_user_id"
+    t.index ["service_request_id"], name: "index_service_request_assignments_on_service_request_id"
   end
 
   create_table "service_requests", force: :cascade do |t|
@@ -69,5 +80,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_12_17_231954) do
   end
 
   add_foreign_key "equipment_rental_requests", "users"
+  add_foreign_key "service_request_assignments", "service_requests"
+  add_foreign_key "service_request_assignments", "users", column: "assigned_by_user_id"
+  add_foreign_key "service_request_assignments", "users", column: "assigned_to_user_id"
   add_foreign_key "service_requests", "users"
 end

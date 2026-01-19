@@ -301,6 +301,8 @@ GEM
       rspec-mocks (~> 3.13)
       rspec-support (~> 3.13)
     rspec-support (3.13.6)
+    rspec_junit_formatter (0.6.0)
+      rspec-core (>= 2, < 4, != 2.12.0)
     rubocop (1.81.7)
       json (~> 2.3)
       language_server-protocol (~> 3.17.0.2)
@@ -330,7 +332,10 @@ GEM
       rubocop-performance (>= 1.24)
       rubocop-rails (>= 2.30)
     ruby-progressbar (1.13.0)
+    ruby_http_client (3.6.0)
     securerandom (0.4.1)
+    sendgrid-ruby (6.7.0)
+      ruby_http_client (~> 3.4)
     square.rb (44.2.0.20251016)
       apimatic_core (~> 0.3.11)
       apimatic_core_interfaces (~> 0.2.1)
@@ -390,7 +395,9 @@ DEPENDENCIES
   rack-cors
   rails (~> 8.0.4)
   rspec-rails (~> 7.0)
+  rspec_junit_formatter
   rubocop-rails-omakase
+  sendgrid-ruby
   square.rb (~> 44.2)
   thruster
   tzinfo-data

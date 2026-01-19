@@ -22,8 +22,15 @@ Rails.application.routes.draw do
 
     resources :products, only: [:index, :show]
 
-    resources :service_requests, only: [:index, :create]
+    resources :service_requests, only: [:index, :create] do
+      member do
+        post :assign
+      end
+    end
     resources :equipment_rental_requests, only: [:index, :create]
+
+    # User routes
+    get 'users/admins', to: 'users#admins'
 
     resources :orders, only: [:create] do
       collection do

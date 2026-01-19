@@ -1,0 +1,32 @@
+New Service Request Assignment
+===============================================
+
+Hi <%= @assigned_to_user.given_name || @assigned_to_user.email %>,
+
+<%= @assigned_by_user.given_name || @assigned_by_user.email %> has assigned you a new service request.
+
+Service Request Details:
+------------------------
+
+Customer: <%= @service_request.customer_name %>
+Company: <%= @service_request.company %>
+Service Requested: <%= @service_request.service_requested %>
+
+Equipment: <%= @service_request.manufacturer %> <%= @service_request.model %>
+Serial Number: <%= @service_request.serial_number %>
+
+Pickup Date: <%= @service_request.pickup_date.strftime('%B %d, %Y') %>
+Return Date: <%= @service_request.return_date.strftime('%B %d, %Y') %>
+
+<% if @service_request.dropped_or_impacted %>
+Note: Equipment was dropped or impacted
+<% end %>
+
+<% if @service_request.needs_rush %>
+Priority: Rush service needed
+<% end %>
+
+Please review and process this service request at your earliest convenience.
+
+---
+This is an automated notification from RMJobsites.

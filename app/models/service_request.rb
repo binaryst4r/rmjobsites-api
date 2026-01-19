@@ -1,5 +1,6 @@
 class ServiceRequest < ApplicationRecord
   belongs_to :user, optional: true
+  has_one :assignment, class_name: 'ServiceRequestAssignment', dependent: :destroy
 
   validates :customer_name, presence: true
   validates :company, presence: true

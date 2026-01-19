@@ -336,8 +336,9 @@ class SquareService
   # @param location_id [String] Location ID (defaults to configured location)
   # @param taxes [Array<Hash>] Optional taxes
   # @param discounts [Array<Hash>] Optional discounts
+  # @param fulfillments [Array<Hash>] Optional fulfillments (pickup or shipment)
   # @return [Hash] The created order object
-  def create_order(line_items:, customer_id: nil, location_id: nil, taxes: [], discounts: [])
+  def create_order(line_items:, customer_id: nil, location_id: nil, taxes: [], discounts: [], fulfillments: [])
     order_location_id = location_id || @location_id
 
     raise ArgumentError, "Location ID is required" unless order_location_id
@@ -353,6 +354,7 @@ class SquareService
     body[:order][:customer_id] = customer_id if customer_id.present?
     body[:order][:taxes] = taxes if taxes.any?
     body[:order][:discounts] = discounts if discounts.any?
+    body[:order][:fulfillments] = fulfillments if fulfillments.any?
 
     response = @client.orders.create(**body)
     handle_response(response)
@@ -456,6 +458,60 @@ class SquareService
     search_orders(query: query, limit: limit)
   rescue StandardError => e
     handle_standard_error(e)
+  end
+
+  # Build a pickup fulfillment object for Square Orders API
+  # @param recipient_name [String] Full name of person picking up
+  # @param recipient_email [String] Email of person picking up
+  # @param recipient_phone [String] Phone number of person picking up
+  # @param pickup_at [String] ISO8601 timestamp for scheduled pickup
+  # @return [Hash] Pickup fulfillment object
+  def build_pickup_fulfillment(recipient_name:, recipient_email:, recipient_phone: nil, pickup_at:)
+    {
+      type: 'PICKUP',
+      state: 'PROPOSED',
+      pickup_details: {
+        recipient: {
+          display_name: recipient_name,
+          email_address: recipient_email,
+          phone_number: recipient_phone
+        }.compact,
+        schedule_type: 'SCHEDULED',
+        pickup_at: pickup_at,
+        pickup_window_duration: 'P1D', # 1 day window
+        note: 'Please bring a valid ID for pickup.',
+        placed_at: Time.current.iso8601
+      }
+    }
+  end
+
+  # Build a shipment fulfillment object for Square Orders API
+  # @param recipient_name [String] Full name of recipient
+  # @param recipient_email [String] Email of recipient
+  # @param recipient_phone [String] Phone number of recipient
+  # @param address [Hash] Shipping address with address_line_1, locality, administrative_district_level_1, postal_code, country
+  # @return [Hash] Shipment fulfillment object
+  def build_shipment_fulfillment(recipient_name:, recipient_email:, recipient_phone: nil, address:)
+    {
+      type: 'SHIPMENT',
+      state: 'PROPOSED',
+      shipment_details: {
+        recipient: {
+          display_name: recipient_name,
+          email_address: recipient_email,
+          phone_number: recipient_phone,
+          address: {
+            address_line_1: address[:address_line_1],
+            address_line_2: address[:address_line_2],
+            locality: address[:locality],
+            administrative_district_level_1: address[:administrative_district_level_1],
+            postal_code: address[:postal_code],
+            country: address[:country] || 'US'
+          }.compact
+        }.compact,
+        placed_at: Time.current.iso8601
+      }
+    }
   end
 
   # ======================
