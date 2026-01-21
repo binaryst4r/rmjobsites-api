@@ -8,11 +8,7 @@ class Api::AuthController < ApplicationController
       token = JsonWebToken.encode(user_id: user.id)
       render json: {
         token: token,
-        user: {
-          id: user.id,
-          email: user.email,
-          admin: user.admin
-        }
+        user: UserSerializer.new(user).as_json
       }, status: :ok
     else
       render json: { error: "Invalid email or password" }, status: :unauthorized
@@ -26,11 +22,7 @@ class Api::AuthController < ApplicationController
       token = JsonWebToken.encode(user_id: user.id)
       render json: {
         token: token,
-        user: {
-          id: user.id,
-          email: user.email,
-          admin: user.admin
-        }
+        user: UserSerializer.new(user).as_json
       }, status: :created
     else
       render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
@@ -38,7 +30,7 @@ class Api::AuthController < ApplicationController
   end
 
   def profile
-    render json: { user: current_user }, status: :ok
+    render json: { user: UserSerializer.new(current_user).as_json }, status: :ok
   end
 
   private

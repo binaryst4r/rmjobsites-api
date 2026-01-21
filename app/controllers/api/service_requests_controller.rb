@@ -6,7 +6,7 @@ class Api::ServiceRequestsController < ApplicationController
     service_requests = ServiceRequest.includes(:user, assignment: :assigned_to_user).order(created_at: :desc)
 
     render json: {
-      service_requests: service_requests.map { |sr| format_service_request(sr) }
+      service_requests: service_requests.map { |sr| ServiceRequestSerializer.new(sr).as_json }
     }, status: :ok
   end
 
@@ -29,7 +29,7 @@ class Api::ServiceRequestsController < ApplicationController
 
     if service_request.save
       render json: {
-        service_request: format_service_request(service_request),
+        service_request: ServiceRequestSerializer.new(service_request).as_json,
         message: "Service request submitted successfully"
       }, status: :created
     else
@@ -68,7 +68,7 @@ class Api::ServiceRequestsController < ApplicationController
     end
 
     render json: {
-      service_request: format_service_request(service_request.reload),
+      service_request: ServiceRequestSerializer.new(service_request.reload).as_json,
       message: "Service request assigned successfully"
     }, status: :ok
   rescue ActiveRecord::RecordNotFound => e
@@ -107,41 +107,5 @@ class Api::ServiceRequestsController < ApplicationController
       :model,
       :serial_number
     )
-  end
-
-  def format_service_request(service_request)
-    result = {
-      id: service_request.id,
-      user_id: service_request.user_id,
-      customer_name: service_request.customer_name,
-      customer_email: service_request.user&.email,
-      company: service_request.company,
-      service_requested: service_request.service_requested,
-      pickup_date: service_request.pickup_date,
-      return_date: service_request.return_date,
-      dropped_or_impacted: service_request.dropped_or_impacted,
-      needs_replacement_accessories: service_request.needs_replacement_accessories,
-      needs_rush: service_request.needs_rush,
-      needs_rental: service_request.needs_rental,
-      manufacturer: service_request.manufacturer,
-      model: service_request.model,
-      serial_number: service_request.serial_number,
-      created_at: service_request.created_at,
-      updated_at: service_request.updated_at
-    }
-
-    # Add assignment info if present
-    if service_request.assignment
-      result[:assigned_user] = {
-        id: service_request.assignment.assigned_to_user.id,
-        email: service_request.assignment.assigned_to_user.email,
-        given_name: service_request.assignment.assigned_to_user.given_name,
-        family_name: service_request.assignment.assigned_to_user.family_name
-      }
-    else
-      result[:assigned_user] = nil
-    end
-
-    result
   end
 end

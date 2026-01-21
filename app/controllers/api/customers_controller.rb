@@ -22,7 +22,10 @@ class Api::CustomersController < ApplicationController
     end
 
     # If no Square customer, return user data from our database
-    render json: user_to_customer_format(@target_user), status: :ok
+    render json: UserSerializer.new(@target_user, for: :square).as_json.merge(
+      local_user_id: @target_user.id,
+      has_square_customer: false
+    ), status: :ok
   rescue StandardError => e
     render json: { error: "Failed to fetch customer: #{e.message}" }, status: :internal_server_error
   end
@@ -78,11 +81,17 @@ class Api::CustomersController < ApplicationController
           render json: customer_result, status: :ok
         else
           # Return local user data if Square creation fails
-          render json: user_to_customer_format(@target_user), status: :ok
+          render json: UserSerializer.new(@target_user, for: :square).as_json.merge(
+            local_user_id: @target_user.id,
+            has_square_customer: false
+          ), status: :ok
         end
       else
         # No email, just return local user data
-        render json: user_to_customer_format(@target_user), status: :ok
+        render json: UserSerializer.new(@target_user, for: :square).as_json.merge(
+          local_user_id: @target_user.id,
+          has_square_customer: false
+        ), status: :ok
       end
     end
   rescue StandardError => e
@@ -183,27 +192,6 @@ class Api::CustomersController < ApplicationController
 
     # Otherwise, deny access
     render json: { error: "Unauthorized" }, status: :forbidden
-  end
-
-  # Convert local user model to Square customer format
-  def user_to_customer_format(user)
-    {
-      id: user.square_customer_id || "local_#{user.id}",
-      email_address: user.email,
-      given_name: user.given_name,
-      family_name: user.family_name,
-      phone_number: user.phone_number,
-      address: {
-        address_line_1: user.address_line_1,
-        address_line_2: user.address_line_2,
-        locality: user.city,
-        administrative_district_level_1: user.state,
-        postal_code: user.postal_code,
-        country: user.country || 'US'
-      }.compact,
-      local_user_id: user.id,
-      has_square_customer: false
-    }
   end
 
   # Build Square customer attributes from params
