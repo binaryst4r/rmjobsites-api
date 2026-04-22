@@ -2,6 +2,8 @@ FactoryBot.define do
   factory :service_request do
     association :user, factory: :user
     customer_name { Faker::Name.name }
+    customer_email { Faker::Internet.email }
+    turn_around_time { 'Standard 7-10 business days - $180.00' }
     company { Faker::Company.name }
     service_requested { %w[Installation Maintenance Repair Consultation].sample }
     pickup_date { 7.days.from_now.to_date }

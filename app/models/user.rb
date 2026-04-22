@@ -1,6 +1,10 @@
 class User < ApplicationRecord
   has_secure_password
 
+  generates_token_for :password_reset, expires_in: 15.minutes do
+    password_salt&.last(10)
+  end
+
   has_many :service_requests
   has_many :assigned_service_requests,
            class_name: 'ServiceRequestAssignment',

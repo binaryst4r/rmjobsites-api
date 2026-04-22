@@ -9,6 +9,8 @@ RSpec.describe 'Api::ServiceRequests', type: :request do
       {
         service_request: {
           customer_name: 'John Doe',
+          customer_email: 'john@example.com',
+          turn_around_time: 'Standard 7-10 business days - $180.00',
           company: 'Acme Inc',
           service_requested: 'Installation',
           pickup_date: Date.today + 7.days,
@@ -52,13 +54,13 @@ RSpec.describe 'Api::ServiceRequests', type: :request do
 
     context 'with invalid parameters' do
       it 'returns unprocessable_entity for missing required fields' do
-        invalid_params = { service_request: { customer_name: 'John Doe' } }
+        invalid_params = { service_request: { customer_name: 'John Doe', customer_email: 'john@example.com' } }
         post '/api/service_requests', params: invalid_params
         expect(response).to have_http_status(:unprocessable_entity)
       end
 
       it 'returns error messages' do
-        invalid_params = { service_request: { customer_name: 'John Doe' } }
+        invalid_params = { service_request: { customer_name: 'John Doe', customer_email: 'john@example.com' } }
         post '/api/service_requests', params: invalid_params
         expect(json_response[:errors]).to be_present
       end

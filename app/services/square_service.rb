@@ -298,20 +298,29 @@ class SquareService
   # @param family_name [String] Optional last name
   # @return [Hash] The customer object
   def find_or_create_customer(email:, given_name: nil, family_name: nil)
+    raise ArgumentError, "Email is required" if email.blank?
+
+    email = email.strip
+
     # Search for existing customer by email
-    search_result = search_customers(
-      query: {
-        filter: {
-          email_address: {
-            exact: email
+    begin
+      search_result = search_customers(
+        query: {
+          filter: {
+            email_address: {
+              exact: email
+            }
           }
         }
-      }
-    )
+      )
 
-    # Return existing customer if found
-    if search_result[:customers]&.any?
-      return search_result[:customers].first
+      # Return existing customer if found
+      if search_result[:customers]&.any?
+        return search_result[:customers].first
+      end
+    rescue StandardError => e
+      # Log search failure but continue to create
+      Rails.logger.warn "Customer search by email failed: #{e.message}. Falling back to create."
     end
 
     # Create new customer if not found
@@ -322,6 +331,8 @@ class SquareService
     )
 
     create_result[:customer]
+  rescue ArgumentError => e
+    raise e
   rescue StandardError => e
     handle_standard_error(e)
   end
@@ -337,8 +348,9 @@ class SquareService
   # @param taxes [Array<Hash>] Optional taxes
   # @param discounts [Array<Hash>] Optional discounts
   # @param fulfillments [Array<Hash>] Optional fulfillments (pickup or shipment)
+  # @param auto_apply_taxes [Boolean] When true, Square applies taxes configured on the location
   # @return [Hash] The created order object
-  def create_order(line_items:, customer_id: nil, location_id: nil, taxes: [], discounts: [], fulfillments: [])
+  def create_order(line_items:, customer_id: nil, location_id: nil, taxes: [], discounts: [], fulfillments: [], auto_apply_taxes: false)
     order_location_id = location_id || @location_id
 
     raise ArgumentError, "Location ID is required" unless order_location_id
@@ -355,6 +367,7 @@ class SquareService
     body[:order][:taxes] = taxes if taxes.any?
     body[:order][:discounts] = discounts if discounts.any?
     body[:order][:fulfillments] = fulfillments if fulfillments.any?
+    body[:order][:pricing_options] = { auto_apply_taxes: true } if auto_apply_taxes
 
     response = @client.orders.create(**body)
     handle_response(response)
@@ -479,8 +492,7 @@ class SquareService
         schedule_type: 'SCHEDULED',
         pickup_at: pickup_at,
         pickup_window_duration: 'P1D', # 1 day window
-        note: 'Please bring a valid ID for pickup.',
-        placed_at: Time.current.iso8601
+        note: 'Please bring a valid ID for pickup.'
       }
     }
   end
@@ -508,8 +520,7 @@ class SquareService
             postal_code: address[:postal_code],
             country: address[:country] || 'US'
           }.compact
-        }.compact,
-        placed_at: Time.current.iso8601
+        }.compact
       }
     }
   end

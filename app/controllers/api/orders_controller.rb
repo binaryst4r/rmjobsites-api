@@ -13,17 +13,13 @@ class Api::OrdersController < ApplicationController
       return
     end
 
-    # Build order object for Square
+    # Build order object for Square. Auto-apply the location's configured taxes
+    # to every order — origin-sourced for shipments (single CO location).
     order = {
       location_id: Rails.application.config.square[:location_id],
-      line_items: format_line_items(line_items)
+      line_items: format_line_items(line_items),
+      pricing_options: { auto_apply_taxes: true }
     }
-
-    # Add service charge for shipping (pickup is free)
-    if fulfillment_type == 'SHIPMENT'
-      # You can adjust shipping cost calculation here
-      # For now, keeping existing service charge behavior
-    end
 
     square_service = SquareService.new
     result = square_service.calculate_order(order)
@@ -116,6 +112,7 @@ class Api::OrdersController < ApplicationController
     square_service = SquareService.new
 
     # Find or create Square customer
+    Rails.logger.info "Creating order for email: '#{customer_info[:email]}'"
     customer = square_service.find_or_create_customer(
       email: customer_info[:email],
       given_name: customer_info[:given_name],
@@ -185,11 +182,13 @@ class Api::OrdersController < ApplicationController
       )
     end
 
-    # Create the order with fulfillments
+    # Create the order with fulfillments. Auto-apply location-configured taxes on
+    # every order — origin-sourced for shipments (single CO location).
     order_result = square_service.create_order(
       line_items: format_line_items(line_items),
       customer_id: square_customer_id,
-      fulfillments: fulfillments
+      fulfillments: fulfillments,
+      auto_apply_taxes: true
     )
 
     unless order_result[:order]

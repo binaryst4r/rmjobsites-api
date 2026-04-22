@@ -1,0 +1,13 @@
+New Contact Form Submission
+===========================
+
+From: <%= @name %>
+Email: <%= @email %>
+<% if @phone.present? %>Phone: <%= @phone %><% end %>
+
+Message:
+--------
+<%= @message %>
+
+---
+This message was sent from the RM Jobsite Solutions website contact form.

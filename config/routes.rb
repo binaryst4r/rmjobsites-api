@@ -10,6 +10,8 @@ Rails.application.routes.draw do
     post "auth/login", to: "auth#login"
     post "auth/register", to: "auth#register"
     get "auth/profile", to: "auth#profile"
+    post "auth/forgot_password", to: "passwords#forgot"
+    post "auth/reset_password", to: "passwords#reset"
 
     # Configuration routes
     get "config/square", to: "config#square"
@@ -29,8 +31,14 @@ Rails.application.routes.draw do
     end
     resources :equipment_rental_requests, only: [:index, :create]
 
+    # Contact form
+    post 'contact', to: 'contact#create'
+
     # User routes
     get 'users/admins', to: 'users#admins'
+
+    # Shipping rates
+    post 'shipping/rates', to: 'shipping#rates'
 
     resources :orders, only: [:create] do
       collection do

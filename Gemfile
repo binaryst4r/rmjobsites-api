@@ -42,6 +42,9 @@ gem "square.rb", "~> 44.2"
 # SendGrid for transactional emails
 gem "sendgrid-ruby"
 
+# HTTParty for Shippo API requests
+gem "httparty"
+
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
@@ -59,6 +62,11 @@ group :development, :test do
   gem "rspec-rails", "~> 7.0"
   gem "factory_bot_rails"
   gem "faker"
+end
+
+group :development do
+  # Preview outgoing emails in the browser instead of sending them
+  gem "letter_opener"
 end
 
 group :test do

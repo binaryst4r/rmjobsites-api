@@ -13,6 +13,12 @@ RSpec.describe ServiceRequest, type: :model do
       expect(service_request.errors[:customer_name]).to include("can't be blank")
     end
 
+    it 'requires customer_email' do
+      service_request = build(:service_request, customer_email: nil)
+      expect(service_request).not_to be_valid
+      expect(service_request.errors[:customer_email]).to include("can't be blank")
+    end
+
     it 'requires company' do
       service_request = build(:service_request, company: nil)
       expect(service_request).not_to be_valid

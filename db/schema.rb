@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_01_06_025654) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_22_224221) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -49,14 +49,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_01_06_025654) do
     t.date "pickup_date"
     t.date "return_date"
     t.boolean "dropped_or_impacted"
-    t.boolean "needs_replacement_accessories"
-    t.boolean "needs_rush"
+    t.string "needs_replacement_accessories"
     t.boolean "needs_rental"
     t.string "manufacturer"
     t.string "model"
     t.string "serial_number"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "customer_email"
+    t.string "turn_around_time"
+    t.boolean "after_hours_dropoff"
+    t.text "notes"
     t.index ["user_id"], name: "index_service_requests_on_user_id"
   end
 
@@ -76,6 +79,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_01_06_025654) do
     t.string "state"
     t.string "postal_code"
     t.string "country"
+    t.string "company_name"
     t.index ["email"], name: "index_users_on_email", unique: true
   end
 

@@ -3,6 +3,8 @@ class ServiceRequest < ApplicationRecord
   has_one :assignment, class_name: 'ServiceRequestAssignment', dependent: :destroy
 
   validates :customer_name, presence: true
+  validates :customer_email, presence: true
+  validates :turn_around_time, presence: true
   validates :company, presence: true
   validates :service_requested, presence: true
   validates :pickup_date, presence: true

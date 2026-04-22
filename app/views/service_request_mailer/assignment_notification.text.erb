@@ -22,10 +22,6 @@ Return Date: <%= @service_request.return_date.strftime('%B %d, %Y') %>
 Note: Equipment was dropped or impacted
 <% end %>
 
-<% if @service_request.needs_rush %>
-Priority: Rush service needed
-<% end %>
-
 Please review and process this service request at your earliest convenience.
 
 ---

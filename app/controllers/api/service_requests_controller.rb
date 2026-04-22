@@ -95,13 +95,16 @@ class Api::ServiceRequestsController < ApplicationController
   def service_request_params
     params.require(:service_request).permit(
       :customer_name,
+      :customer_email,
+      :turn_around_time,
+      :after_hours_dropoff,
+      :notes,
       :company,
       :service_requested,
       :pickup_date,
       :return_date,
       :dropped_or_impacted,
       :needs_replacement_accessories,
-      :needs_rush,
       :needs_rental,
       :manufacturer,
       :model,
