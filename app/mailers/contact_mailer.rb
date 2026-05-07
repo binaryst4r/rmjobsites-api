@@ -8,7 +8,7 @@ class ContactMailer < ApplicationMailer
     @message = message
 
     mail(
-      to: 'Ryan@rmjobsites.com',
+      to: 'support@rmjobsites.com',
       reply_to: email,
       subject: "New Contact Form Submission from #{name}"
     )

@@ -78,6 +78,7 @@ class SquareService
   # @return [Hash] The catalog item object with image_urls
   def get_catalog_item(item_id, include_related: false)
     response = @client.catalog.object.get(object_id: item_id, include_related_objects: include_related)
+    puts response.inspect
     result = handle_response(response)
 
     # Extract image URLs from related objects if available
@@ -479,21 +480,28 @@ class SquareService
   # @param recipient_phone [String] Phone number of person picking up
   # @param pickup_at [String] ISO8601 timestamp for scheduled pickup
   # @return [Hash] Pickup fulfillment object
-  def build_pickup_fulfillment(recipient_name:, recipient_email:, recipient_phone: nil, pickup_at:)
+  def build_pickup_fulfillment(recipient_name:, recipient_email:, recipient_phone: nil, pickup_at: nil, note: nil)
+    pickup_details = {
+      recipient: {
+        display_name: recipient_name,
+        email_address: recipient_email,
+        phone_number: recipient_phone
+      }.compact,
+      note: note.presence || 'Please bring a valid ID for pickup.'
+    }
+
+    if pickup_at.present?
+      pickup_details[:schedule_type] = 'SCHEDULED'
+      pickup_details[:pickup_at] = pickup_at
+      pickup_details[:pickup_window_duration] = 'P1D'
+    else
+      pickup_details[:schedule_type] = 'ASAP'
+    end
+
     {
       type: 'PICKUP',
       state: 'PROPOSED',
-      pickup_details: {
-        recipient: {
-          display_name: recipient_name,
-          email_address: recipient_email,
-          phone_number: recipient_phone
-        }.compact,
-        schedule_type: 'SCHEDULED',
-        pickup_at: pickup_at,
-        pickup_window_duration: 'P1D', # 1 day window
-        note: 'Please bring a valid ID for pickup.'
-      }
+      pickup_details: pickup_details
     }
   end
 

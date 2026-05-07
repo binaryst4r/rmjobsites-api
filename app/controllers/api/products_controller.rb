@@ -47,7 +47,6 @@ class Api::ProductsController < ApplicationController
     limit = params[:limit]&.to_i || 100
 
     result = square_service.get_items_by_category(params[:id], limit: limit)
-
     products = format_products(result[:items] || [])
     render json: { products: products }, status: :ok
   rescue SquareService::SquareError => e
@@ -63,10 +62,16 @@ class Api::ProductsController < ApplicationController
   end
 
   def format_product(item)
+    description_html = item.dig(:item_data, :description_html).presence
+    description_plaintext = item.dig(:item_data, :description_plaintext).presence
+    description_legacy = item.dig(:item_data, :description).presence
+
     {
       id: item[:id],
       name: item.dig(:item_data, :name),
-      description: item.dig(:item_data, :description),
+      # Legacy field — Square's rich-text editor stops populating this once html is set.
+      description: description_plaintext || description_legacy,
+      description_html: description_html,
       abbreviation: item.dig(:item_data, :abbreviation),
       category_ids: item.dig(:item_data, :category_ids) || [],
       image_urls: item[:image_urls] || [],

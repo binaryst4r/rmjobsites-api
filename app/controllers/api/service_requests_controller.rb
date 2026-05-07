@@ -28,6 +28,10 @@ class Api::ServiceRequestsController < ApplicationController
     service_request.user_id = user_id if user_id
 
     if service_request.save
+      if service_request.customer_email.present?
+        ServiceRequestMailer.customer_confirmation(service_request).deliver_later
+      end
+
       render json: {
         service_request: ServiceRequestSerializer.new(service_request).as_json,
         message: "Service request submitted successfully"
@@ -96,19 +100,26 @@ class Api::ServiceRequestsController < ApplicationController
     params.require(:service_request).permit(
       :customer_name,
       :customer_email,
+      :customer_phone,
       :turn_around_time,
       :after_hours_dropoff,
       :notes,
       :company,
       :service_requested,
       :pickup_date,
+      :dropoff_time,
       :return_date,
+      :damage_status,
+      :replacement_status,
+      :rental_status,
+      :rental_during_service_type,
       :dropped_or_impacted,
       :needs_replacement_accessories,
       :needs_rental,
       :manufacturer,
       :model,
-      :serial_number
+      :serial_number,
+      replacement_parts: []
     )
   end
 end

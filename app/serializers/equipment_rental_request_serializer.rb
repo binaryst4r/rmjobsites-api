@@ -15,34 +15,52 @@ class EquipmentRentalRequestSerializer
 
   private
 
-  # Default format for create endpoint
   def default_format
     {
       id: @equipment_rental_request.id,
       user_id: @equipment_rental_request.user_id,
+      company_name: @equipment_rental_request.company_name,
+      contact_name: @equipment_rental_request.contact_name,
       customer_first_name: @equipment_rental_request.customer_first_name,
       customer_last_name: @equipment_rental_request.customer_last_name,
       customer_email: @equipment_rental_request.customer_email,
       customer_phone: @equipment_rental_request.customer_phone,
       equipment_type: @equipment_rental_request.equipment_type,
-      pickup_date: @equipment_rental_request.pickup_date,
-      return_date: @equipment_rental_request.return_date,
+      rental_duration_unit: @equipment_rental_request.rental_duration_unit,
+      rental_duration_amount: @equipment_rental_request.rental_duration_amount,
       rental_agreement_accepted: @equipment_rental_request.rental_agreement_accepted,
-      payment_method: @equipment_rental_request.payment_method,
+      notes: @equipment_rental_request.notes,
       created_at: @equipment_rental_request.created_at,
       updated_at: @equipment_rental_request.updated_at
     }
   end
 
-  # Compact format for admin list view
   def admin_list_format
+    name = display_name
+    duration = display_duration
     {
       id: @equipment_rental_request.id,
-      customer_name: "#{@equipment_rental_request.customer_first_name} #{@equipment_rental_request.customer_last_name}",
+      customer_name: name,
+      company_name: @equipment_rental_request.company_name,
       customer_email: @equipment_rental_request.customer_email,
-      date: "#{@equipment_rental_request.pickup_date} - #{@equipment_rental_request.return_date}",
+      duration: duration,
       equipment: @equipment_rental_request.equipment_type,
       created_at: @equipment_rental_request.created_at
     }
+  end
+
+  def display_name
+    contact = @equipment_rental_request.contact_name
+    return contact if contact.present?
+
+    "#{@equipment_rental_request.customer_first_name} #{@equipment_rental_request.customer_last_name}".strip
+  end
+
+  def display_duration
+    unit = @equipment_rental_request.rental_duration_unit
+    amount = @equipment_rental_request.rental_duration_amount
+    return nil if unit.blank? || amount.blank?
+
+    "#{amount} #{unit}#{amount.to_i == 1 ? '' : 's'}"
   end
 end

@@ -12,4 +12,14 @@ class ServiceRequestMailer < ApplicationMailer
       subject: "New Service Request Assignment: #{@service_request.customer_name}"
     )
   end
+
+  def customer_confirmation(service_request)
+    @service_request = service_request
+
+    mail(
+      to: service_request.customer_email,
+      cc: 'support@rmjobsites.com',
+      subject: 'We received your service request'
+    )
+  end
 end

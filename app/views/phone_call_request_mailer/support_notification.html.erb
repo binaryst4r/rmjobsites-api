@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta content='text/html; charset=UTF-8' http-equiv='Content-Type' />
+    <style>
+      body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+      .container { max-width: 640px; margin: 0 auto; padding: 20px; }
+      .header { background: #7f1d1d; color: white; padding: 16px 20px; }
+      .content { background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; }
+      .label { font-weight: bold; color: #4b5563; }
+      table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+      th, td { padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: left; font-size: 14px; }
+      th { background: #f3f4f6; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header"><h2 style="margin: 0;">Phone Call Request</h2></div>
+      <div class="content">
+        <p>A customer requested a phone call from the checkout page. No payment was collected.</p>
+
+        <p>
+          <span class="label">Customer:</span>
+          <%= [@customer_info[:given_name] || @customer_info['given_name'],
+               @customer_info[:family_name] || @customer_info['family_name']].compact.join(' ').presence || '—' %><br>
+          <span class="label">Email:</span> <%= @customer_info[:email] || @customer_info['email'] %><br>
+          <% phone = @customer_info[:phone] || @customer_info['phone'] %>
+          <% if phone.present? %>
+            <span class="label">Phone:</span> <%= phone %><br>
+          <% end %>
+        </p>
+
+        <h3>Cart Contents</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Variation</th>
+              <th>Qty</th>
+              <th>Catalog ID</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @line_items.each do |item| %>
+              <tr>
+                <td><%= item[:product_name] || item['product_name'] || '—' %></td>
+                <td><%= item[:variation_name] || item['variation_name'] || '—' %></td>
+                <td><%= item[:quantity] || item['quantity'] %></td>
+                <td><%= item[:catalog_object_id] || item['catalog_object_id'] %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+
+        <% if @notes.present? %>
+          <h3>Notes</h3>
+          <p><%= @notes %></p>
+        <% end %>
+      </div>
+    </div>
+  </body>
+</html>

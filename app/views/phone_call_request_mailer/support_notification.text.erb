@@ -1,0 +1,19 @@
+Phone Call Request
+
+A customer requested a phone call from the checkout page. No payment was collected.
+
+Customer: <%= [@customer_info[:given_name] || @customer_info['given_name'],
+               @customer_info[:family_name] || @customer_info['family_name']].compact.join(' ').presence || '—' %>
+Email: <%= @customer_info[:email] || @customer_info['email'] %>
+<% phone = @customer_info[:phone] || @customer_info['phone'] %>
+<% if phone.present? %>Phone: <%= phone %><% end %>
+
+Cart Contents:
+<% @line_items.each do |item| %>
+- <%= item[:product_name] || item['product_name'] || '—' %> / <%= item[:variation_name] || item['variation_name'] || '—' %> / qty <%= item[:quantity] || item['quantity'] %> (catalog: <%= item[:catalog_object_id] || item['catalog_object_id'] %>)
+<% end %>
+
+<% if @notes.present? %>
+Notes:
+<%= @notes %>
+<% end %>

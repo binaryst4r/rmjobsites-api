@@ -28,6 +28,10 @@
 !/tmp/storage/
 !/tmp/storage/.keep
 
+# Ignore accidentally-created SQLite artifacts (app uses Postgres).
+*.sqlite3
+*.sqlite3-*
+
 # Ignore master key for decrypting credentials and more.
 /config/master.key
 

@@ -1,6 +1,12 @@
 class Api::OrdersController < ApplicationController
-  skip_before_action :authenticate_request, only: [:calculate]
+  skip_before_action :authenticate_request, only: [:calculate, :phone_call_request]
   before_action :authenticate_request, only: [:create]
+
+  DELIVERY_TIER_LABELS = {
+    'next_day' => 'Next Day',
+    'two_day' => '2-Day',
+    'three_day' => '3-Day'
+  }.freeze
 
   # POST /api/orders/calculate
   # Calculate order totals without creating the order
@@ -26,8 +32,9 @@ class Api::OrdersController < ApplicationController
 
     if result[:order]
       calculated = format_calculated_order(result[:order])
-      # Override shipping to $0 for pickup orders
-      calculated[:shipping] = 0 if fulfillment_type == 'PICKUP'
+      # Override shipping to $0 for pickup and delivery (delivery is selection-only,
+      # priced/coordinated by staff after order placement).
+      calculated[:shipping] = 0 if %w[PICKUP DELIVERY].include?(fulfillment_type)
       calculated[:total] = calculated[:subtotal] + calculated[:taxes] + calculated[:shipping]
       render json: calculated, status: :ok
     else
@@ -46,6 +53,8 @@ class Api::OrdersController < ApplicationController
     shipping_address = params[:shipping_address]
     fulfillment_type = params[:fulfillment_type] || 'PICKUP'
     pickup_details = params[:pickup_details]
+    pickup_variant = params[:pickup_variant] || 'normal'
+    delivery_tier = params[:delivery_tier]
 
     # Validate required params
     unless line_items.present? && payment_token.present? && customer_info.present?
@@ -54,58 +63,65 @@ class Api::OrdersController < ApplicationController
     end
 
     # Validate fulfillment type
-    unless ['PICKUP', 'SHIPMENT'].include?(fulfillment_type)
-      render json: { error: "Invalid fulfillment type. Must be PICKUP or SHIPMENT" }, status: :unprocessable_entity
+    unless %w[PICKUP DELIVERY SHIPMENT].include?(fulfillment_type)
+      render json: { error: "Invalid fulfillment type. Must be PICKUP, DELIVERY, or SHIPMENT" }, status: :unprocessable_entity
       return
     end
 
     # Validate fulfillment-specific requirements
-    if fulfillment_type == 'SHIPMENT'
-      # Validate shipping address fields
+    if fulfillment_type == 'SHIPMENT' || fulfillment_type == 'DELIVERY'
+      # Both shipping and delivery require an address (delivery within 50-mile radius)
       if shipping_address.blank? ||
          shipping_address[:address_line_1].blank? ||
          shipping_address[:locality].blank? ||
          shipping_address[:administrative_district_level_1].blank? ||
          shipping_address[:postal_code].blank?
-        render json: { error: "Shipping address (address line 1, city, state, and postal code) is required for shipment orders" }, status: :unprocessable_entity
+        render json: { error: "Address (line 1, city, state, and postal code) is required for #{fulfillment_type.downcase} orders" }, status: :unprocessable_entity
+        return
+      end
+
+      if fulfillment_type == 'DELIVERY' && !DELIVERY_TIER_LABELS.key?(delivery_tier.to_s)
+        render json: { error: "Invalid delivery tier. Must be next_day, two_day, or three_day" }, status: :unprocessable_entity
         return
       end
     elsif fulfillment_type == 'PICKUP'
-      # Validate pickup details
-      if pickup_details.blank? || pickup_details[:date].blank? || pickup_details[:time].blank?
-        render json: { error: "Pickup date and time are required for pickup orders" }, status: :unprocessable_entity
+      unless %w[normal after_hours].include?(pickup_variant)
+        render json: { error: "Invalid pickup variant" }, status: :unprocessable_entity
         return
       end
 
-      # Validate pickup date is not in the past
-      begin
-        pickup_date = Date.parse(pickup_details[:date])
-        if pickup_date < Date.today
-          render json: { error: "Pickup date cannot be in the past" }, status: :unprocessable_entity
+      # Date/time only required for normal-hours pickup
+      if pickup_variant == 'normal'
+        if pickup_details.blank? || pickup_details[:date].blank? || pickup_details[:time].blank?
+          render json: { error: "Pickup date and time are required for normal-hours pickup" }, status: :unprocessable_entity
           return
         end
 
-        # Validate not a weekend
-        if pickup_date.saturday? || pickup_date.sunday?
-          render json: { error: "Pickup is not available on weekends. Please contact us for weekend arrangements." }, status: :unprocessable_entity
+        begin
+          pickup_date = Date.parse(pickup_details[:date])
+          if pickup_date < Date.today
+            render json: { error: "Pickup date cannot be in the past" }, status: :unprocessable_entity
+            return
+          end
+          if pickup_date.saturday? || pickup_date.sunday?
+            render json: { error: "Pickup is not available on weekends. Please contact us for weekend arrangements." }, status: :unprocessable_entity
+            return
+          end
+        rescue ArgumentError
+          render json: { error: "Invalid pickup date format" }, status: :unprocessable_entity
           return
         end
-      rescue ArgumentError
-        render json: { error: "Invalid pickup date format" }, status: :unprocessable_entity
-        return
-      end
 
-      # Validate pickup time is within business hours (8 AM - 5 PM)
-      begin
-        time_parts = pickup_details[:time].split(':')
-        hour = time_parts[0].to_i
-        if hour < 8 || hour >= 17
-          render json: { error: "Pickup time must be between 8:00 AM and 5:00 PM" }, status: :unprocessable_entity
+        begin
+          hour = pickup_details[:time].split(':')[0].to_i
+          if hour < 8 || hour >= 17
+            render json: { error: "Pickup time must be between 8:00 AM and 5:00 PM" }, status: :unprocessable_entity
+            return
+          end
+        rescue
+          render json: { error: "Invalid pickup time format" }, status: :unprocessable_entity
           return
         end
-      rescue
-        render json: { error: "Invalid pickup time format" }, status: :unprocessable_entity
-        return
       end
     end
 
@@ -132,8 +148,9 @@ class Api::OrdersController < ApplicationController
       user_updates[:given_name] = customer_info[:given_name] if customer_info[:given_name].present?
       user_updates[:family_name] = customer_info[:family_name] if customer_info[:family_name].present?
 
-      # Save shipping address if provided (only for shipment orders)
-      if fulfillment_type == 'SHIPMENT' && shipping_address.present?
+      # Save address if provided for shipment or delivery
+      address_relevant = %w[SHIPMENT DELIVERY].include?(fulfillment_type) && shipping_address.present?
+      if address_relevant
         user_updates[:address_line_1] = shipping_address[:address_line_1] if shipping_address[:address_line_1].present?
         user_updates[:address_line_2] = shipping_address[:address_line_2] if shipping_address[:address_line_2].present?
         user_updates[:city] = shipping_address[:locality] if shipping_address[:locality].present?
@@ -144,8 +161,8 @@ class Api::OrdersController < ApplicationController
 
       current_user.update(user_updates) if user_updates.any?
 
-      # Update Square customer with address if provided (only for shipment)
-      if fulfillment_type == 'SHIPMENT' && shipping_address.present?
+      # Sync Square customer address (shipment + delivery)
+      if address_relevant
         square_service.update_customer(square_customer_id, {
           address: {
             address_line_1: shipping_address[:address_line_1],
@@ -165,13 +182,34 @@ class Api::OrdersController < ApplicationController
     recipient_name = customer_info[:email] if recipient_name.blank?
 
     if fulfillment_type == 'PICKUP'
-      # Combine date and time into ISO8601 timestamp
-      pickup_datetime = DateTime.parse("#{pickup_details[:date]} #{pickup_details[:time]}")
+      if pickup_variant == 'normal'
+        pickup_datetime = DateTime.parse("#{pickup_details[:date]} #{pickup_details[:time]}")
+        fulfillments << square_service.build_pickup_fulfillment(
+          recipient_name: recipient_name,
+          recipient_email: customer_info[:email],
+          recipient_phone: current_user&.phone_number,
+          pickup_at: pickup_datetime.iso8601,
+          note: 'Normal-hours pickup. Please bring a valid ID.'
+        )
+      else
+        fulfillments << square_service.build_pickup_fulfillment(
+          recipient_name: recipient_name,
+          recipient_email: customer_info[:email],
+          recipient_phone: current_user&.phone_number,
+          note: 'After-hours pickup — staff will contact the customer with instructions.'
+        )
+      end
+    elsif fulfillment_type == 'DELIVERY'
+      tier_label = DELIVERY_TIER_LABELS.fetch(delivery_tier.to_s)
+      addr_line = "#{shipping_address[:address_line_1]} #{shipping_address[:address_line_2]}".strip
+      delivery_note = "Delivery (#{tier_label}) to #{addr_line}, #{shipping_address[:locality]}, " \
+                      "#{shipping_address[:administrative_district_level_1]} #{shipping_address[:postal_code]}. " \
+                      "Pricing/coordination to follow."
       fulfillments << square_service.build_pickup_fulfillment(
         recipient_name: recipient_name,
         recipient_email: customer_info[:email],
         recipient_phone: current_user&.phone_number,
-        pickup_at: pickup_datetime.iso8601
+        note: delivery_note
       )
     elsif fulfillment_type == 'SHIPMENT'
       fulfillments << square_service.build_shipment_fulfillment(
@@ -237,6 +275,36 @@ class Api::OrdersController < ApplicationController
     end
   rescue StandardError => e
     render json: { error: "Failed to create order: #{e.message}" }, status: :internal_server_error
+  end
+
+  # POST /api/orders/phone_call_request
+  # Customer chose "request a phone call" at checkout. No payment, no Square order —
+  # just email support@ with the cart so staff can follow up.
+  def phone_call_request
+    customer_info = params[:customer_info] || {}
+    line_items = params[:line_items] || []
+    notes = params[:notes].to_s
+
+    if customer_info[:email].blank?
+      render json: { error: "Email is required" }, status: :unprocessable_entity
+      return
+    end
+
+    if line_items.empty?
+      render json: { error: "Line items are required" }, status: :unprocessable_entity
+      return
+    end
+
+    PhoneCallRequestMailer.support_notification(
+      customer_info: customer_info.to_unsafe_h,
+      line_items: line_items.map(&:to_unsafe_h),
+      notes: notes
+    ).deliver_later
+
+    render json: { success: true, message: "Phone call request submitted. We'll be in touch shortly." }, status: :ok
+  rescue StandardError => e
+    Rails.logger.error("Phone call request error: #{e.message}")
+    render json: { error: "Failed to submit phone call request" }, status: :internal_server_error
   end
 
   private

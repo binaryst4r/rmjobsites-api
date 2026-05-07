@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_22_224221) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_28_235142) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -27,6 +27,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_224221) do
     t.string "payment_method"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "company_name"
+    t.string "contact_name"
+    t.string "rental_duration_unit"
+    t.integer "rental_duration_amount"
+    t.text "notes"
     t.index ["user_id"], name: "index_equipment_rental_requests_on_user_id"
   end
 
@@ -60,6 +65,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_22_224221) do
     t.string "turn_around_time"
     t.boolean "after_hours_dropoff"
     t.text "notes"
+    t.string "customer_phone"
+    t.string "dropoff_time"
+    t.string "damage_status"
+    t.string "replacement_status"
+    t.string "rental_status"
+    t.string "rental_during_service_type"
+    t.string "replacement_parts", default: [], array: true
     t.index ["user_id"], name: "index_service_requests_on_user_id"
   end
 

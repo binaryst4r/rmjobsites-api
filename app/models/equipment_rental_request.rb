@@ -1,27 +1,21 @@
 class EquipmentRentalRequest < ApplicationRecord
   belongs_to :user, optional: true
 
-  validates :customer_first_name, presence: true
-  validates :customer_last_name, presence: true
+  EQUIPMENT_TYPES = %w[Laser Level\ \Pipe\ Laser Slope\ Laser Transit Theodolite GPS\ On-Site].freeze
+  RENTAL_DURATION_UNITS = %w[day week month].freeze
+
+  validates :company_name, presence: true
+  validates :contact_name, presence: true
   validates :customer_email, presence: true, format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :customer_phone, presence: true
   validates :equipment_type, presence: true
-  validates :pickup_date, presence: true
-  validates :return_date, presence: true
+  validates :rental_duration_unit, presence: true, inclusion: { in: RENTAL_DURATION_UNITS }
+  validates :rental_duration_amount, presence: true, numericality: { only_integer: true, greater_than: 0 }
   validates :rental_agreement_accepted, inclusion: { in: [true, false] }
 
-  validate :return_date_after_pickup_date
   validate :rental_agreement_must_be_accepted
 
   private
-
-  def return_date_after_pickup_date
-    return if pickup_date.blank? || return_date.blank?
-
-    if return_date <= pickup_date
-      errors.add(:return_date, "must be after pickup date")
-    end
-  end
 
   def rental_agreement_must_be_accepted
     unless rental_agreement_accepted == true

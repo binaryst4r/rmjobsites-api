@@ -11,6 +11,8 @@ class UserMailer < ApplicationMailer
   private
 
   def frontend_url
-    ENV.fetch("FRONTEND_URL", "http://localhost:5173")
+    return ENV["FRONTEND_URL"] if ENV["FRONTEND_URL"].present?
+
+    Rails.env.production? ? "https://rmjobsites.com" : "http://localhost:5173"
   end
 end

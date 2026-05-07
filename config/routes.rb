@@ -36,6 +36,7 @@ Rails.application.routes.draw do
 
     # User routes
     get 'users/admins', to: 'users#admins'
+    get 'users', to: 'users#index'
 
     # Shipping rates
     post 'shipping/rates', to: 'shipping#rates'
@@ -43,6 +44,7 @@ Rails.application.routes.draw do
     resources :orders, only: [:create] do
       collection do
         post :calculate
+        post :phone_call_request
       end
     end
 

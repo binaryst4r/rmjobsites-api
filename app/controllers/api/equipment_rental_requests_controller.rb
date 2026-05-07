@@ -28,6 +28,10 @@ class Api::EquipmentRentalRequestsController < ApplicationController
     equipment_rental_request.user_id = user_id if user_id
 
     if equipment_rental_request.save
+      if equipment_rental_request.customer_email.present?
+        EquipmentRentalRequestMailer.customer_confirmation(equipment_rental_request).deliver_later
+      end
+
       render json: {
         equipment_rental_request: EquipmentRentalRequestSerializer.new(equipment_rental_request).as_json,
         message: "Equipment rental request submitted successfully"
@@ -58,15 +62,19 @@ class Api::EquipmentRentalRequestsController < ApplicationController
 
   def equipment_rental_request_params
     params.require(:equipment_rental_request).permit(
+      :company_name,
+      :contact_name,
       :customer_first_name,
       :customer_last_name,
       :customer_email,
       :customer_phone,
       :equipment_type,
+      :rental_duration_unit,
+      :rental_duration_amount,
       :pickup_date,
       :return_date,
       :rental_agreement_accepted,
-      :payment_method
+      :notes
     )
   end
 end

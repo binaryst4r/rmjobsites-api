@@ -45,8 +45,11 @@ class ShippingRateService
     square_service = SquareService.new
     result = square_service.batch_retrieve_catalog_objects(object_ids, include_related: true)
 
-    objects = result[:objects] || []
-    objects.index_by { |obj| obj[:id] }
+    # When the caller passes a variation ID, Square returns the variation in :objects
+    # and its parent ITEM in :related_objects. We need both to find weights that may
+    # be set as custom attributes on either level.
+    all_objects = (result[:objects] || []) + (result[:related_objects] || [])
+    all_objects.index_by { |obj| obj[:id] }
   end
 
   def calculate_total_weight(catalog_data)
@@ -57,22 +60,29 @@ class ShippingRateService
       quantity = (item[:quantity] || 1).to_i
       catalog_obj = catalog_data[id]
 
-      weight = extract_weight(catalog_obj, id)
+      weight = extract_weight(catalog_obj, catalog_data, id)
       total += weight * quantity
     end
 
     total
   end
 
-  def extract_weight(catalog_obj, catalog_id)
+  def extract_weight(catalog_obj, catalog_data, catalog_id)
     return raise_missing_weight(catalog_id) unless catalog_obj
 
-    # Square doesn't have a native weight field on CatalogItemVariation.
-    # Weight is stored as a custom attribute in custom_attribute_values on the CatalogObject.
+    # 1. Variation/item's own custom attributes
     weight = extract_weight_from_custom_attributes(catalog_obj)
     return weight if weight
 
-    # If the object is an ITEM, check its variations' custom attributes
+    # 2. If we have a variation, check its parent item's custom attributes
+    parent_item_id = catalog_obj.dig(:item_variation_data, :item_id)
+    if parent_item_id
+      parent_item = catalog_data[parent_item_id]
+      weight = extract_weight_from_custom_attributes(parent_item) if parent_item
+      return weight if weight
+    end
+
+    # 3. If we have an item, walk its variations' custom attributes
     item_data = catalog_obj.dig(:item_data)
     if item_data
       variations = item_data[:variations] || []
@@ -83,7 +93,8 @@ class ShippingRateService
     end
 
     Rails.logger.error "No weight found for catalog object #{catalog_id}. Object keys: #{catalog_obj.keys}. " \
-      "custom_attribute_values: #{catalog_obj[:custom_attribute_values]&.keys}"
+      "custom_attribute_values: #{catalog_obj[:custom_attribute_values]&.keys}. " \
+      "Parent item id: #{parent_item_id.inspect}."
     raise_missing_weight(catalog_id)
   end
 

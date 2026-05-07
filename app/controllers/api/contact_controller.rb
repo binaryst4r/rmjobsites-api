@@ -7,8 +7,8 @@ class Api::ContactController < ApplicationController
     phone = contact_params[:phone]
     message = contact_params[:message]
 
-    if name.blank? || email.blank? || message.blank?
-      render json: { error: "Name, email, and message are required" }, status: :unprocessable_entity
+    if name.blank? || email.blank? || phone.blank? || message.blank?
+      render json: { error: "Name, email, phone, and message are required" }, status: :unprocessable_entity
       return
     end
 

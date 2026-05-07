@@ -8,12 +8,27 @@ class UserSerializer
     case @format
     when :square
       square_customer_format
+    when :admin_list
+      admin_list_format
     else
       default_format
     end
   end
 
   private
+
+  def admin_list_format
+    {
+      id: @user.id,
+      email: @user.email,
+      given_name: @user.given_name,
+      family_name: @user.family_name,
+      phone_number: @user.phone_number,
+      admin: @user.admin,
+      square_customer_id: @user.square_customer_id,
+      created_at: @user.created_at&.iso8601
+    }
+  end
 
   # Default format for auth endpoints (login, register, profile)
   def default_format

@@ -1,6 +1,11 @@
 class Api::CategoriesController < ApplicationController
   skip_before_action :authenticate_request
 
+  # Square sales-channel ID for the public website. Categories must be published
+  # to this channel in the Square dashboard to appear on the storefront.
+  # TODO: move to Rails credentials / ENV before deploying to additional environments.
+  WEBSITE_CHANNEL_ID = "CH_u4JfKYV3BnLWa1mqr5uimpJeWOnAmzB28DcLIQlQuYC".freeze
+
   def index
     square_service = SquareService.new
     result = square_service.list_categories
@@ -8,7 +13,14 @@ class Api::CategoriesController < ApplicationController
     # The service returns { objects: [...enriched with image_urls] }
     categories_data = result[:objects] || []
 
-    categories = categories_data.map do |category|
+    # Only show top-level categories that are published to the website sales channel.
+    visible_categories = categories_data.select do |category|
+      channels = category.dig(:category_data, :channels) || []
+      channels.include?(WEBSITE_CHANNEL_ID) &&
+        category.dig(:category_data, :is_top_level) == true
+    end
+
+    categories = visible_categories.map do |category|
       {
         id: category[:id],
         name: category.dig(:category_data, :name),
