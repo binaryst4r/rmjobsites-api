@@ -83,7 +83,9 @@ Rails.application.configure do
 
   # Enable DNS rebinding protection and other `Host` header attacks.
   config.hosts = [
-    "rmjobsites.com"
+    "rmjobsites.com",
+    /.*\.rmjobsites\.com/,
+    "rmjobsites-a456b3dcb27e.herokuapp.com"
   ]
   #
   # Skip DNS rebinding protection for the default health check endpoint.
